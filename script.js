@@ -1,18 +1,12 @@
 const NEWSDATA_API_KEY = "pub_bf801222c93f4a0aa638f45e1ba45df9";
 
 const NEWS_ENDPOINT = "https://newsdata.io/api/1/latest";
-
 const PRIMARY_DOMAINS = [
   "reuters.com",
   "apnews.com",
   "bbc.com",
   "theguardian.com",
   "foxnews.com"
-];
-
-const BACKUP_DOMAINS = [
-  "nypost.com",
-  "washingtonpost.com"
 ];
 
 const WEATHER_URL =
@@ -35,31 +29,37 @@ const sectionEls = {
   tech: document.getElementById("techStories")
 };
 
-document.getElementById("enableAlertsBtn").addEventListener("click", enableDesktopAlerts);
-document.getElementById("refreshBtn").addEventListener("click", refreshAll);
+const alertsBtn = document.getElementById("enableAlertsBtn");
+const refreshBtn = document.getElementById("refreshBtn");
 
-init();
+if (alertsBtn) alertsBtn.addEventListener("click", enableDesktopAlerts);
+if (refreshBtn) refreshBtn.addEventListener("click", refreshAll);
 
-async function init() {
+boot();
+
+async function boot() {
+  setStatus("Booting…");
   startWorldClocks();
-
-  await Promise.allSettled([
-    loadWeather(),
-    refreshAll()
-  ]);
+  await loadWeather();
+  await refreshAll();
 
   setInterval(loadWeather, 60 * 60 * 1000);
   setInterval(refreshAll, 15 * 60 * 1000);
-
-  setInterval(async () => {
+  setInterval(() => {
     if (document.visibilityState === "visible") {
-      await checkBreakingUpdates();
+      checkBreakingUpdates();
     }
   }, 3 * 60 * 1000);
 }
 
+function setStatus(text) {
+  const el = document.getElementById("lastRefresh");
+  if (el) el.textContent = text;
+}
+
 async function refreshAll() {
   try {
+    setStatus("Refreshing…");
     const articles = await fetchNews();
     state.articles = articles;
 
@@ -67,10 +67,11 @@ async function refreshAll() {
     renderSidebarLists(articles);
     renderTicker(articles);
     renderSections(articles);
-    updateLastRefresh();
+
+    setStatus(new Date().toLocaleString());
   } catch (error) {
     renderError(error);
-    updateLastRefresh(true);
+    setStatus("Error");
     console.error("Refresh error:", error);
   }
 }
@@ -80,65 +81,38 @@ async function fetchNews() {
     throw new Error("NewsData API key missing or invalid.");
   }
 
-  let articles = await fetchNewsBatch(PRIMARY_DOMAINS);
+  const url = new URL(NEWS_ENDPOINT);
+  url.searchParams.set("apikey", NEWSDATA_API_KEY);
+  url.searchParams.set("language", "en");
+  url.searchParams.set("domain", PRIMARY_DOMAINS.join(","));
+  url.searchParams.set("size", "10");
 
-  if (articles.length < 12 && BACKUP_DOMAINS.length) {
-    const backupArticles = await fetchNewsBatch(BACKUP_DOMAINS);
-    articles = normalizeArticles([...articles, ...backupArticles]);
+  const res = await fetch(url.toString(), { method: "GET", cache: "no-store" });
+  const text = await res.text();
+
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`NewsData returned invalid JSON: ${text.slice(0, 160)}`);
   }
 
-  if (!articles.length) {
-    throw new Error("No articles returned. Check quota, plan limits, or API response.");
+  if (!res.ok) {
+    throw new Error(data.message || `NewsData request failed (${res.status})`);
   }
 
-  return articles;
-}
-
-async function fetchNewsBatch(domains) {
-  const articles = [];
-  let nextPage = null;
-
-  for (let i = 0; i < 2; i += 1) {
-    const url = new URL(NEWS_ENDPOINT);
-    url.searchParams.set("apikey", NEWSDATA_API_KEY);
-    url.searchParams.set("language", "en");
-    url.searchParams.set("domain", domains.join(","));
-    url.searchParams.set("size", "10");
-
-    if (nextPage) {
-      url.searchParams.set("page", nextPage);
-    }
-
-    const res = await fetch(url.toString(), {
-      method: "GET",
-      cache: "no-store"
-    });
-
-    const text = await res.text();
-    let data;
-
-    try {
-      data = JSON.parse(text);
-    } catch {
-      throw new Error(`NewsData returned non-JSON response: ${text.slice(0, 200)}`);
-    }
-
-    if (!res.ok) {
-      throw new Error(data.message || `NewsData request failed (${res.status}).`);
-    }
-
-    if (data.status !== "success") {
-      throw new Error(data.message || "News feed failed.");
-    }
-
-    const pageItems = Array.isArray(data.results) ? data.results : [];
-    articles.push(...pageItems);
-
-    if (!data.nextPage) break;
-    nextPage = data.nextPage;
+  if (data.status !== "success") {
+    throw new Error(data.message || "NewsData returned a non-success response.");
   }
 
-  return normalizeArticles(articles);
+  const items = Array.isArray(data.results) ? data.results : [];
+  const normalized = normalizeArticles(items);
+
+  if (!normalized.length) {
+    throw new Error("No article results came back from NewsData.");
+  }
+
+  return normalized;
 }
 
 function normalizeArticles(items) {
@@ -181,8 +155,8 @@ function renderLeadStory(articles) {
   document.getElementById("leadImage").src = lead.image || FALLBACK_IMAGE;
   document.getElementById("leadImage").alt = lead.title;
   document.getElementById("leadDek").textContent =
-    lead.description || "Open the original article for the full story and source reporting.";
-  document.getElementById("leadMeta").textContent = formatMeta(lead);
+    lead.description || "Open the original article for the full story.";
+  document.getElementById("leadMeta").textContent = `${lead.source} • ${relativeTime(lead.published)}`;
   document.getElementById("leadBullets").innerHTML = buildLeadBullets(articles, lead);
 }
 
@@ -201,25 +175,15 @@ function renderSidebarLists(articles) {
 
 function renderTicker(articles) {
   const sourceItems = articles.slice(0, 8);
-
-  if (!sourceItems.length) {
-    document.getElementById("tickerTrack").innerHTML = "<span>No headlines loaded.</span>";
-    return;
-  }
-
-  const row = sourceItems
-    .map((article) => {
-      return `
+  document.getElementById("tickerTrack").innerHTML = sourceItems.length
+    ? sourceItems.map((article) => `
         <span class="ticker-item">
           <a href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">
             ${escapeHtml(article.title)}
           </a>
         </span>
-      `;
-    })
-    .join("");
-
-  document.getElementById("tickerTrack").innerHTML = `${row}${row}`;
+      `).join("")
+    : "<span>No headlines loaded.</span>";
 }
 
 function renderSections(articles) {
@@ -230,12 +194,6 @@ function renderSections(articles) {
     politics: articles.filter((a) => a.section === "politics").slice(0, 4),
     tech: articles.filter((a) => a.section === "tech").slice(0, 4)
   };
-
-  if (!bySection.us.length) bySection.us = articles.slice(1, 5);
-  if (!bySection.world.length) bySection.world = articles.slice(5, 9);
-  if (!bySection.business.length) bySection.business = articles.slice(9, 12);
-  if (!bySection.politics.length) bySection.politics = articles.slice(12, 16);
-  if (!bySection.tech.length) bySection.tech = articles.slice(16, 20);
 
   Object.entries(bySection).forEach(([key, items]) => {
     sectionEls[key].innerHTML = items.length
@@ -258,11 +216,10 @@ async function checkBreakingUpdates() {
       });
     }
 
-    state.articles = latest;
     renderSidebarLists(latest);
     renderTicker(latest);
   } catch (error) {
-    console.warn("Background breaking check failed:", error);
+    console.warn("Breaking check failed:", error);
   }
 }
 
@@ -273,39 +230,30 @@ async function enableDesktopAlerts() {
   }
 
   const permission = await Notification.requestPermission();
-
   if (permission === "granted") {
     state.notificationsEnabled = true;
-    document.getElementById("enableAlertsBtn").textContent = "Desktop Alerts On";
+    alertsBtn.textContent = "Desktop Alerts On";
   }
 }
 
 function notify(title, body, url) {
   if (Notification.permission !== "granted") return;
-
-  const n = new Notification("The Daily Briefing", {
-    body: `${title} — ${body}`
-  });
-
+  const n = new Notification("The Daily Briefing", { body: `${title} — ${body}` });
   n.onclick = () => window.open(url, "_blank", "noopener");
 }
 
 async function loadWeather() {
   try {
     const res = await fetch(WEATHER_URL, { cache: "no-store" });
-
-    if (!res.ok) {
-      throw new Error("Weather request failed.");
-    }
+    if (!res.ok) throw new Error("Weather request failed.");
 
     const data = await res.json();
     const currentTemp = data.current_weather?.temperature;
     const weatherCode = data.current_weather?.weathercode;
-    const desc = weatherCodeToText(weatherCode);
 
     document.getElementById("weatherCurrentTemp").textContent =
       currentTemp !== undefined ? `${Math.round(currentTemp)}°F` : "--°F";
-    document.getElementById("weatherCurrentDesc").textContent = desc;
+    document.getElementById("weatherCurrentDesc").textContent = weatherCodeToText(weatherCode);
     document.getElementById("weatherNowLine").textContent = "Bend, Oregon • 5-day forecast";
 
     const days = data.daily?.time || [];
@@ -313,18 +261,16 @@ async function loadWeather() {
     const lows = data.daily?.temperature_2m_min || [];
     const codes = data.daily?.weather_code || [];
 
-    document.getElementById("forecastRow").innerHTML = days.slice(0, 5).map((day, i) => {
-      return `
-        <div class="forecast-day">
-          <div class="day-name">${dayShort(day)}</div>
-          <div class="temp-range">${Math.round(highs[i])}° / ${Math.round(lows[i])}°</div>
-          <div class="desc">${weatherCodeToText(codes[i])}</div>
-        </div>
-      `;
-    }).join("");
+    document.getElementById("forecastRow").innerHTML = days.slice(0, 5).map((day, i) => `
+      <div class="forecast-day">
+        <div class="day-name">${dayShort(day)}</div>
+        <div class="temp-range">${Math.round(highs[i])}° / ${Math.round(lows[i])}°</div>
+        <div class="desc">${weatherCodeToText(codes[i])}</div>
+      </div>
+    `).join("");
   } catch (error) {
-    console.error("Weather error:", error);
     document.getElementById("weatherNowLine").textContent = "Weather unavailable";
+    console.error("Weather error:", error);
   }
 }
 
@@ -336,38 +282,33 @@ function startWorldClocks() {
 function updateWorldClocks() {
   const now = new Date();
 
-  const manilaTime = new Intl.DateTimeFormat("en-US", {
+  document.getElementById("manilaTime").textContent = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit"
   }).format(now);
 
-  const manilaDate = new Intl.DateTimeFormat("en-US", {
+  document.getElementById("manilaDate").textContent = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
     weekday: "short",
     month: "short",
     day: "numeric"
   }).format(now);
 
-  const swedenTime = new Intl.DateTimeFormat("en-US", {
+  document.getElementById("swedenTime").textContent = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Stockholm",
     hour: "numeric",
     minute: "2-digit",
     second: "2-digit"
   }).format(now);
 
-  const swedenDate = new Intl.DateTimeFormat("en-US", {
+  document.getElementById("swedenDate").textContent = new Intl.DateTimeFormat("en-US", {
     timeZone: "Europe/Stockholm",
     weekday: "short",
     month: "short",
     day: "numeric"
   }).format(now);
-
-  document.getElementById("manilaTime").textContent = manilaTime;
-  document.getElementById("manilaDate").textContent = manilaDate;
-  document.getElementById("swedenTime").textContent = swedenTime;
-  document.getElementById("swedenDate").textContent = swedenDate;
 }
 
 function sidebarItem(article, number = null) {
@@ -393,63 +334,35 @@ function storyCard(article) {
             ${escapeHtml(article.title)}
           </a>
         </h4>
-        <div class="story-meta">${escapeHtml(formatMeta(article))}</div>
+        <div class="story-meta">${escapeHtml(article.source)} • ${escapeHtml(relativeTime(article.published))}</div>
       </div>
     </article>
   `;
 }
 
-function formatMeta(article) {
-  return `${article.source} • ${relativeTime(article.published)}`;
-}
-
 function buildLeadBullets(articles, lead) {
-  const bullets = articles
+  return articles
     .filter((item) => item.url !== lead.url)
     .slice(0, 4)
-    .map((item) =>
-      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`
-    )
-    .join("");
-
-  return bullets || "<li>More stories will appear after the next refresh.</li>";
+    .map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`)
+    .join("") || "<li>More stories will appear after refresh.</li>";
 }
 
 function pickLeadStory(articles) {
-  const preferred = articles.find((a) =>
-    ["Reuters", "Associated Press", "AP", "BBC", "The Guardian", "Washington Post"].some((name) =>
-      String(a.source).toLowerCase().includes(name.toLowerCase())
-    )
-  );
-
-  return preferred || articles[0] || null;
+  return articles[0] || null;
 }
 
 function guessSection(title, description, source) {
   const text = `${title} ${description} ${source}`.toLowerCase();
-
-  if (/(stock|market|dow|nasdaq|s&p|oil|inflation|fed|economy|business|earnings|tariff)/.test(text)) {
-    return "business";
-  }
-
-  if (/(election|congress|senate|house|supreme court|white house|campaign|governor|president|policy|trump|biden)/.test(text)) {
-    return "politics";
-  }
-
-  if (/(ai|artificial intelligence|chip|science|nasa|space|tech|software|iphone|microsoft|google|openai|tesla)/.test(text)) {
-    return "tech";
-  }
-
-  if (/(iran|israel|ukraine|russia|china|gaza|middle east|europe|asia|africa|world|global|united nations|u\.n\.)/.test(text)) {
-    return "world";
-  }
-
+  if (/(stock|market|dow|nasdaq|s&p|oil|inflation|fed|economy|business|earnings|tariff)/.test(text)) return "business";
+  if (/(election|congress|senate|house|supreme court|white house|campaign|governor|president|policy|trump|biden)/.test(text)) return "politics";
+  if (/(ai|artificial intelligence|chip|science|nasa|space|tech|software|iphone|microsoft|google|openai|tesla)/.test(text)) return "tech";
+  if (/(iran|israel|ukraine|russia|china|gaza|middle east|europe|asia|africa|world|global|united nations|u\.n\.)/.test(text)) return "world";
   return "us";
 }
 
 function relativeTime(dateString) {
   if (!dateString) return "Recently";
-
   const then = new Date(dateString);
   if (Number.isNaN(then.getTime())) return "Recently";
 
@@ -464,8 +377,7 @@ function relativeTime(dateString) {
 }
 
 function dayShort(isoDate) {
-  const d = new Date(`${isoDate}T12:00:00`);
-  return d.toLocaleDateString("en-US", { weekday: "short" });
+  return new Date(`${isoDate}T12:00:00`).toLocaleDateString("en-US", { weekday: "short" });
 }
 
 function weatherCodeToText(code) {
@@ -496,35 +408,21 @@ function isHomepageUrl(url) {
   }
 }
 
-function updateLastRefresh(isError = false) {
-  const stamp = new Date().toLocaleString();
-  document.getElementById("lastRefresh").textContent = isError ? `${stamp} (error)` : stamp;
-}
-
 function renderError(error) {
-  const message = error?.message || "Something went wrong.";
-
+  const message = error?.message || "Unknown error";
   document.getElementById("leadLink").textContent = "Unable to load headline";
   document.getElementById("leadLink").href = "#";
   document.getElementById("leadImage").src = FALLBACK_IMAGE;
-  document.getElementById("leadImage").alt = "Fallback news image";
+  document.getElementById("leadImage").alt = "Fallback image";
   document.getElementById("leadMeta").textContent = "News feed error";
   document.getElementById("leadDek").innerHTML = `
     <div class="error-box">
       <strong>News feed error:</strong> ${escapeHtml(message)}
     </div>
   `;
-
-  document.getElementById("leadBullets").innerHTML = `
-    <li>Keep each query to 5 domains max</li>
-    <li>Check your NewsData response in browser console</li>
-    <li>Free plan articles are delayed</li>
-  `;
-
   document.getElementById("breakingList").innerHTML = `<div class="panel-empty">Unable to load breaking headlines.</div>`;
   document.getElementById("mostReadList").innerHTML = `<div class="panel-empty">Unable to load most-read stories.</div>`;
   document.getElementById("tickerTrack").innerHTML = `<span>Unable to load headlines.</span>`;
-
   Object.values(sectionEls).forEach((el) => {
     el.innerHTML = `<div class="panel-empty">No stories loaded.</div>`;
   });

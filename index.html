@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://api.open-meteo.com">
   <link rel="preconnect" href="https://newsdata.io">
   <link rel="preconnect" href="https://images.unsplash.com">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css?v=9" />
 </head>
 <body>
   <div class="page-bg-flag" aria-hidden="true"></div>
@@ -111,37 +111,27 @@
       </div>
 
       <section class="section-block card">
-        <div class="section-header">
-          <h3>U.S.</h3>
-        </div>
+        <div class="section-header"><h3>U.S.</h3></div>
         <div class="story-grid two-col" id="usStories"></div>
       </section>
 
       <section class="section-block card">
-        <div class="section-header">
-          <h3>World</h3>
-        </div>
+        <div class="section-header"><h3>World</h3></div>
         <div class="story-grid two-col" id="worldStories"></div>
       </section>
 
       <section class="section-block card">
-        <div class="section-header">
-          <h3>Business</h3>
-        </div>
+        <div class="section-header"><h3>Business</h3></div>
         <div class="story-grid three-col" id="businessStories"></div>
       </section>
 
       <section class="section-block card">
-        <div class="section-header">
-          <h3>Politics</h3>
-        </div>
+        <div class="section-header"><h3>Politics</h3></div>
         <div class="story-grid two-col" id="politicsStories"></div>
       </section>
 
       <section class="section-block card">
-        <div class="section-header">
-          <h3>Tech / Science</h3>
-        </div>
+        <div class="section-header"><h3>Tech / Science</h3></div>
         <div class="story-grid two-col" id="techStories"></div>
       </section>
     </section>
@@ -163,7 +153,6 @@
 
       <section class="card side-panel">
         <div class="panel-title blue">U.S. Market Index</div>
-
         <div class="tradingview-widget-container markets-widget">
           <div class="tradingview-widget-container__widget"></div>
           <script
@@ -209,10 +198,39 @@
         <div class="status-line"><strong>Last refresh:</strong> <span id="lastRefresh">—</span></div>
         <div class="status-line"><strong>Edition refresh:</strong> Every 15 minutes</div>
         <div class="status-line"><strong>Breaking check:</strong> Every 3 minutes while tab is visible</div>
-        <div class="status-line"><strong>Source mix:</strong> Reuters, AP, BBC, Washington Post, Fox, NY Post, Guardian</div>
+        <div class="status-line"><strong>Source mix:</strong> Reuters, AP, BBC, Guardian, Fox</div>
       </section>
     </aside>
   </main>
 
-  <script src="script.js"></script>
+  <script>
+    window.addEventListener("error", function (e) {
+      const box = document.getElementById("leadDek");
+      const refresh = document.getElementById("lastRefresh");
+      const msg = e && e.message ? e.message : "Unknown JavaScript error";
+      if (box) {
+        box.innerHTML = '<div class="error-box"><strong>JavaScript error:</strong> ' + msg + "</div>";
+      }
+      if (refresh) {
+        refresh.textContent = "JS error";
+      }
+      console.error("Global script error:", e);
+    });
+
+    window.addEventListener("unhandledrejection", function (e) {
+      const box = document.getElementById("leadDek");
+      const refresh = document.getElementById("lastRefresh");
+      const msg = e && e.reason ? String(e.reason.message || e.reason) : "Unhandled promise rejection";
+      if (box) {
+        box.innerHTML = '<div class="error-box"><strong>Promise error:</strong> ' + msg + "</div>";
+      }
+      if (refresh) {
+        refresh.textContent = "Promise error";
+      }
+      console.error("Unhandled rejection:", e);
+    });
+  </script>
+
+  <script src="./script.js?v=9" defer></script>
 </body>
+</html>
