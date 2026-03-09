@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Daily Briefing</title>
+  <link rel="preconnect" href="https://api.open-meteo.com">
+  <link rel="preconnect" href="https://newsdata.io">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-bg-flag" aria-hidden="true"></div>
+
+  <header class="masthead">
+    <div class="top-stripes"></div>
+
+    <div class="brand-row">
+      <div class="brand-left">
+        <img
+          class="eagle-logo"
+          src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/US_Great_Seal.svg/512px-US_Great_Seal.svg.png"
+          alt="American eagle emblem"
+        />
+      </div>
+
+      <div class="brand-center">
+        <h1>THE DAILY BRIEFING</h1>
+        <p>Breaking News, Accurate, Fast</p>
+      </div>
+
+      <div class="brand-right">
+        <button id="enableAlertsBtn" class="action-btn">Enable Desktop Alerts</button>
+        <button id="refreshBtn" class="action-btn secondary">Refresh Now</button>
+      </div>
+    </div>
+
+    <div class="utility-bar">
+      <section class="weather-strip card">
+        <div class="weather-strip-header">
+          <div>
+            <div class="utility-label">BEND WEATHER</div>
+            <div class="utility-sub" id="weatherNowLine">Loading 5-day forecast…</div>
+          </div>
+          <div class="current-temp-wrap">
+            <div class="current-temp" id="weatherCurrentTemp">--°F</div>
+            <div class="current-desc" id="weatherCurrentDesc">—</div>
+          </div>
+        </div>
+
+        <div class="forecast-row" id="forecastRow">
+          <div class="forecast-day">Loading…</div>
+        </div>
+      </section>
+
+      <section class="time-strip card">
+        <div class="time-card">
+          <div class="utility-label">MANILA, PHILIPPINES</div>
+          <div class="clock-time" id="manilaTime">--:--</div>
+          <div class="clock-date" id="manilaDate">—</div>
+        </div>
+        <div class="time-card">
+          <div class="utility-label">STOCKHOLM, SWEDEN</div>
+          <div class="clock-time" id="swedenTime">--:--</div>
+          <div class="clock-date" id="swedenDate">—</div>
+        </div>
+      </section>
+    </div>
+
+    <div class="ticker-wrap">
+      <div class="ticker-label">LIVE BREAKING NEWS</div>
+      <div class="ticker-track-wrap">
+        <div class="ticker-track" id="tickerTrack">
+          <span>Loading headlines…</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="site-grid">
+    <section class="news-column">
+      <div class="lead-story card">
+        <div class="lead-kicker">TOP STORY</div>
+
+        <h2 class="lead-headline">
+          <a id="leadLink" href="#" target="_blank" rel="noopener noreferrer">
+            Loading headline…
+          </a>
+        </h2>
+
+        <div class="lead-meta" id="leadMeta">Fetching latest articles…</div>
+
+        <div class="lead-layout">
+          <div class="lead-image-wrap">
+            <img id="leadImage" class="lead-image" alt="" />
+          </div>
+
+          <div class="lead-side-notes">
+            <div class="lead-dek" id="leadDek">
+              Add your NewsData API key in script.js to load the live feed.
+            </div>
+
+            <ul class="lead-bullets" id="leadBullets">
+              <li>Direct article links open at the original source</li>
+              <li>Weather shows 5-day Fahrenheit forecast</li>
+              <li>Markets use free TradingView index widget</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <section class="section-block card">
+        <div class="section-header">
+          <h3>U.S.</h3>
+        </div>
+        <div class="story-grid two-col" id="usStories"></div>
+      </section>
+
+      <section class="section-block card">
+        <div class="section-header">
+          <h3>World</h3>
+        </div>
+        <div class="story-grid two-col" id="worldStories"></div>
+      </section>
+
+      <section class="section-block card">
+        <div class="section-header">
+          <h3>Business</h3>
+        </div>
+        <div class="story-grid three-col" id="businessStories"></div>
+      </section>
+
+      <section class="section-block card">
+        <div class="section-header">
+          <h3>Politics</h3>
+        </div>
+        <div class="story-grid two-col" id="politicsStories"></div>
+      </section>
+
+      <section class="section-block card">
+        <div class="section-header">
+          <h3>Tech / Science</h3>
+        </div>
+        <div class="story-grid two-col" id="techStories"></div>
+      </section>
+    </section>
+
+    <aside class="sidebar-column">
+      <section class="card side-panel">
+        <div class="panel-title blue">Breaking Now</div>
+        <div id="breakingList" class="panel-list">
+          <div class="panel-empty">Loading…</div>
+        </div>
+      </section>
+
+      <section class="card side-panel">
+        <div class="panel-title red">Most Read</div>
+        <div id="mostReadList" class="panel-list">
+          <div class="panel-empty">Loading…</div>
+        </div>
+      </section>
+
+      <section class="card side-panel">
+        <div class="panel-title blue">U.S. Market Index</div>
+
+        <div class="tradingview-widget-container markets-widget">
+          <div class="tradingview-widget-container__widget"></div>
+          <script
+            type="text/javascript"
+            src="https://s3.tradingview.com/external-embedding/embed-widget-symbol-overview.js"
+            async
+          >
+          {
+            "symbols": [
+              ["FRED:SP500|1D"],
+              ["FRED:NDQ100|1D"],
+              ["BLACKBULL:US30|1D"]
+            ],
+            "chartOnly": false,
+            "width": "100%",
+            "height": "360",
+            "locale": "en",
+            "colorTheme": "light",
+            "autosize": false,
+            "showVolume": false,
+            "showMA": false,
+            "hideDateRanges": false,
+            "hideMarketStatus": true,
+            "hideSymbolLogo": false,
+            "scalePosition": "right",
+            "scaleMode": "Normal",
+            "fontFamily": "Arial, sans-serif",
+            "fontSize": "10",
+            "noTimeScale": false,
+            "valuesTracking": "1",
+            "changeMode": "price-and-percent",
+            "chartType": "area",
+            "lineWidth": 2,
+            "lineType": 0,
+            "dateRanges": ["1d|1","1m|1D","3m|60","12m|1D","60m|1W","all|1M"]
+          }
+          </script>
+        </div>
+      </section>
+
+      <section class="card side-panel status-panel">
+        <div class="panel-title red">Dashboard Status</div>
+        <div class="status-line"><strong>Last refresh:</strong> <span id="lastRefresh">—</span></div>
+        <div class="status-line"><strong>Edition refresh:</strong> Every 15 minutes</div>
+        <div class="status-line"><strong>Breaking check:</strong> Every 3 minutes while tab is visible</div>
+        <div class="status-line"><strong>Source mix:</strong> Reuters, AP, BBC, Washington Post, Fox, NY Post, Guardian</div>
+      </section>
+    </aside>
+  </main>
+
+  <template id="storyCardTemplate">
+    <article class="story-card">
+      <a class="story-image-link" target="_blank" rel="noopener noreferrer">
+        <img class="story-image" alt="" />
+      </a>
+      <div class="story-body">
+        <h4 class="story-title">
+          <a class="story-title-link" target="_blank" rel="noopener noreferrer"></a>
+        </h4>
+        <div class="story-meta"></div>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
