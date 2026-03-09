@@ -1,4 +1,3 @@
-// Paste your real NewsData key here.
 const NEWSDATA_API_KEY = "pub_bf801222c93f4a0aa638f45e1ba45df9";
 
 const NEWS_ENDPOINT = "https://newsdata.io/api/1/latest";
@@ -14,6 +13,9 @@ const NEWS_DOMAINS = [
 
 const WEATHER_URL =
   "https://api.open-meteo.com/v1/forecast?latitude=44.0582&longitude=-121.3153&current_weather=true&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles";
+
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80";
 
 const state = {
   articles: [],
@@ -36,6 +38,7 @@ init();
 
 async function init() {
   startWorldClocks();
+
   await Promise.allSettled([
     loadWeather(),
     refreshAll()
@@ -64,12 +67,13 @@ async function refreshAll() {
   } catch (error) {
     renderError(error);
     updateLastRefresh(true);
+    console.error("Refresh error:", error);
   }
 }
 
 async function fetchNews() {
-  if (!NEWSDATA_API_KEY || NEWSDATA_API_KEY === "pub_bf801222c93f4a0aa638f45e1ba45df9") {
-    throw new Error("Add your NewsData API key in script.js first.");
+  if (!NEWSDATA_API_KEY || !NEWSDATA_API_KEY.startsWith("pub_")) {
+    throw new Error("NewsData API key missing or invalid.");
   }
 
   const articles = [];
@@ -80,19 +84,25 @@ async function fetchNews() {
     url.searchParams.set("apikey", NEWSDATA_API_KEY);
     url.searchParams.set("language", "en");
     url.searchParams.set("domain", NEWS_DOMAINS.join(","));
+    url.searchParams.set("size", "10");
 
     if (nextPage) {
       url.searchParams.set("page", nextPage);
     }
 
-    const res = await fetch(url.toString(), { cache: "no-store" });
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      cache: "no-store"
+    });
+
     if (!res.ok) {
       throw new Error(`NewsData request failed (${res.status}).`);
     }
 
     const data = await res.json();
+
     if (data.status !== "success") {
-      throw new Error(data.results?.message || data.message || "News feed failed.");
+      throw new Error(data.message || "News feed failed.");
     }
 
     const pageItems = Array.isArray(data.results) ? data.results : [];
@@ -103,6 +113,7 @@ async function fetchNews() {
   }
 
   const normalized = normalizeArticles(articles);
+
   if (!normalized.length) {
     throw new Error("No articles returned for the selected sources.");
   }
@@ -123,12 +134,12 @@ function normalizeArticles(items) {
       const description = item.description || "";
 
       return {
-        title,
-        url,
-        image: image || fallbackImage(),
-        source,
+        title: title.trim(),
+        url: url.trim(),
+        image: image || FALLBACK_IMAGE,
+        source: source || "Source",
         published,
-        description,
+        description: description.trim(),
         section: guessSection(title, description, source)
       };
     })
@@ -143,16 +154,15 @@ function normalizeArticles(items) {
 
 function renderLeadStory(articles) {
   const lead = pickLeadStory(articles);
+  if (!lead) return;
 
   document.getElementById("leadLink").textContent = lead.title;
   document.getElementById("leadLink").href = lead.url;
-  document.getElementById("leadImage").src = lead.image;
+  document.getElementById("leadImage").src = lead.image || FALLBACK_IMAGE;
   document.getElementById("leadImage").alt = lead.title;
   document.getElementById("leadDek").textContent =
-    lead.description ||
-    "Open the original article for the full story and source reporting.";
-
-  document.getElementById("leadMeta").innerHTML = formatMeta(lead);
+    lead.description || "Open the original article for the full story and source reporting.";
+  document.getElementById("leadMeta").textContent = formatMeta(lead);
   document.getElementById("leadBullets").innerHTML = buildLeadBullets(articles, lead);
 }
 
@@ -160,18 +170,22 @@ function renderSidebarLists(articles) {
   const breaking = articles.slice(0, 4);
   const mostRead = articles.slice(4, 8);
 
-  document.getElementById("breakingList").innerHTML = breaking
-    .map((article) => sidebarItem(article))
-    .join("");
+  document.getElementById("breakingList").innerHTML = breaking.length
+    ? breaking.map((article) => sidebarItem(article)).join("")
+    : `<div class="panel-empty">No breaking stories loaded.</div>`;
 
-  document.getElementById("mostReadList").innerHTML = mostRead
-    .map((article, index) => sidebarItem(article, index + 1))
-    .join("");
+  document.getElementById("mostReadList").innerHTML = mostRead.length
+    ? mostRead.map((article, index) => sidebarItem(article, index + 1)).join("")
+    : `<div class="panel-empty">No additional stories loaded.</div>`;
 }
 
 function renderTicker(articles) {
   const sourceItems = articles.slice(0, 8);
-  if (!sourceItems.length) return;
+
+  if (!sourceItems.length) {
+    document.getElementById("tickerTrack").innerHTML = "<span>No headlines loaded.</span>";
+    return;
+  }
 
   const row = sourceItems
     .map((article) => {
@@ -204,7 +218,9 @@ function renderSections(articles) {
   if (!bySection.tech.length) bySection.tech = articles.slice(16, 20);
 
   Object.entries(bySection).forEach(([key, items]) => {
-    sectionEls[key].innerHTML = items.map((article) => storyCard(article)).join("");
+    sectionEls[key].innerHTML = items.length
+      ? items.map((article) => storyCard(article)).join("")
+      : `<div class="panel-empty">No stories loaded.</div>`;
   });
 }
 
@@ -212,7 +228,6 @@ async function checkBreakingUpdates() {
   try {
     const latest = await fetchNews();
     const newest = latest.slice(0, 3);
-
     const unseen = newest.filter((item) => !state.breakingUrlsSeen.has(item.url));
 
     newest.forEach((item) => state.breakingUrlsSeen.add(item.url));
@@ -226,8 +241,8 @@ async function checkBreakingUpdates() {
     state.articles = latest;
     renderSidebarLists(latest);
     renderTicker(latest);
-  } catch {
-    // quiet fail for background breaking checks
+  } catch (error) {
+    console.warn("Background breaking check failed:", error);
   }
 }
 
@@ -238,6 +253,7 @@ async function enableDesktopAlerts() {
   }
 
   const permission = await Notification.requestPermission();
+
   if (permission === "granted") {
     state.notificationsEnabled = true;
     document.getElementById("enableAlertsBtn").textContent = "Desktop Alerts On";
@@ -246,38 +262,50 @@ async function enableDesktopAlerts() {
 
 function notify(title, body, url) {
   if (Notification.permission !== "granted") return;
-  const n = new Notification("The Daily Briefing", { body: `${title}` });
+
+  const n = new Notification("The Daily Briefing", {
+    body: `${title} — ${body}`
+  });
+
   n.onclick = () => window.open(url, "_blank", "noopener");
 }
 
 async function loadWeather() {
-  const res = await fetch(WEATHER_URL, { cache: "no-store" });
-  if (!res.ok) throw new Error("Weather request failed.");
+  try {
+    const res = await fetch(WEATHER_URL, { cache: "no-store" });
 
-  const data = await res.json();
-  const currentTemp = data.current_weather?.temperature;
-  const weatherCode = data.current_weather?.weathercode;
-  const desc = weatherCodeToText(weatherCode);
+    if (!res.ok) {
+      throw new Error("Weather request failed.");
+    }
 
-  document.getElementById("weatherCurrentTemp").textContent =
-    currentTemp !== undefined ? `${Math.round(currentTemp)}°F` : "--°F";
-  document.getElementById("weatherCurrentDesc").textContent = desc;
-  document.getElementById("weatherNowLine").textContent = "Bend, Oregon • 5-day forecast";
+    const data = await res.json();
+    const currentTemp = data.current_weather?.temperature;
+    const weatherCode = data.current_weather?.weathercode;
+    const desc = weatherCodeToText(weatherCode);
 
-  const days = data.daily?.time || [];
-  const highs = data.daily?.temperature_2m_max || [];
-  const lows = data.daily?.temperature_2m_min || [];
-  const codes = data.daily?.weather_code || [];
+    document.getElementById("weatherCurrentTemp").textContent =
+      currentTemp !== undefined ? `${Math.round(currentTemp)}°F` : "--°F";
+    document.getElementById("weatherCurrentDesc").textContent = desc;
+    document.getElementById("weatherNowLine").textContent = "Bend, Oregon • 5-day forecast";
 
-  document.getElementById("forecastRow").innerHTML = days.slice(0, 5).map((day, i) => {
-    return `
-      <div class="forecast-day">
-        <div class="day-name">${dayShort(day)}</div>
-        <div class="temp-range">${Math.round(highs[i])}° / ${Math.round(lows[i])}°</div>
-        <div class="desc">${weatherCodeToText(codes[i])}</div>
-      </div>
-    `;
-  }).join("");
+    const days = data.daily?.time || [];
+    const highs = data.daily?.temperature_2m_max || [];
+    const lows = data.daily?.temperature_2m_min || [];
+    const codes = data.daily?.weather_code || [];
+
+    document.getElementById("forecastRow").innerHTML = days.slice(0, 5).map((day, i) => {
+      return `
+        <div class="forecast-day">
+          <div class="day-name">${dayShort(day)}</div>
+          <div class="temp-range">${Math.round(highs[i])}° / ${Math.round(lows[i])}°</div>
+          <div class="desc">${weatherCodeToText(codes[i])}</div>
+        </div>
+      `;
+    }).join("");
+  } catch (error) {
+    console.error("Weather error:", error);
+    document.getElementById("weatherNowLine").textContent = "Weather unavailable";
+  }
 }
 
 function startWorldClocks() {
@@ -337,7 +365,7 @@ function storyCard(article) {
   return `
     <article class="story-card">
       <a class="story-image-link" href="${escapeHtml(article.url)}" target="_blank" rel="noopener noreferrer">
-        <img class="story-image" src="${escapeHtml(article.image)}" alt="${escapeHtml(article.title)}" />
+        <img class="story-image" src="${escapeHtml(article.image || FALLBACK_IMAGE)}" alt="${escapeHtml(article.title)}" />
       </a>
       <div class="story-body">
         <h4 class="story-title">
@@ -345,31 +373,36 @@ function storyCard(article) {
             ${escapeHtml(article.title)}
           </a>
         </h4>
-        <div class="story-meta">${formatMeta(article)}</div>
+        <div class="story-meta">${escapeHtml(formatMeta(article))}</div>
       </div>
     </article>
   `;
 }
 
 function formatMeta(article) {
-  return `${escapeHtml(article.source)} • ${escapeHtml(relativeTime(article.published))}`;
+  return `${article.source} • ${relativeTime(article.published)}`;
 }
 
 function buildLeadBullets(articles, lead) {
-  return articles
+  const bullets = articles
     .filter((item) => item.url !== lead.url)
     .slice(0, 4)
-    .map((item) => `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`)
+    .map((item) =>
+      `<li><a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(item.title)}</a></li>`
+    )
     .join("");
+
+  return bullets || "<li>More stories will appear after the next refresh.</li>";
 }
 
 function pickLeadStory(articles) {
   const preferred = articles.find((a) =>
-    ["Reuters", "Associated Press", "AP", "BBC News", "The Guardian"].some((name) =>
+    ["Reuters", "Associated Press", "AP", "BBC", "The Guardian", "Washington Post"].some((name) =>
       String(a.source).toLowerCase().includes(name.toLowerCase())
     )
   );
-  return preferred || articles[0];
+
+  return preferred || articles[0] || null;
 }
 
 function guessSection(title, description, source) {
@@ -378,20 +411,25 @@ function guessSection(title, description, source) {
   if (/(stock|market|dow|nasdaq|s&p|oil|inflation|fed|economy|business|earnings|tariff)/.test(text)) {
     return "business";
   }
+
   if (/(election|congress|senate|house|supreme court|white house|campaign|governor|president|policy|trump|biden)/.test(text)) {
     return "politics";
   }
+
   if (/(ai|artificial intelligence|chip|science|nasa|space|tech|software|iphone|microsoft|google|openai|tesla)/.test(text)) {
     return "tech";
   }
+
   if (/(iran|israel|ukraine|russia|china|gaza|middle east|europe|asia|africa|world|global|united nations|u\.n\.)/.test(text)) {
     return "world";
   }
+
   return "us";
 }
 
 function relativeTime(dateString) {
   if (!dateString) return "Recently";
+
   const then = new Date(dateString);
   if (Number.isNaN(then.getTime())) return "Recently";
 
@@ -438,10 +476,6 @@ function isHomepageUrl(url) {
   }
 }
 
-function fallbackImage() {
-  return "https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1200&q=80";
-}
-
 function updateLastRefresh(isError = false) {
   const stamp = new Date().toLocaleString();
   document.getElementById("lastRefresh").textContent = isError ? `${stamp} (error)` : stamp;
@@ -449,13 +483,27 @@ function updateLastRefresh(isError = false) {
 
 function renderError(error) {
   const message = error?.message || "Something went wrong.";
+
+  document.getElementById("leadLink").textContent = "Unable to load headline";
+  document.getElementById("leadLink").href = "#";
+  document.getElementById("leadImage").src = FALLBACK_IMAGE;
+  document.getElementById("leadImage").alt = "Fallback news image";
+  document.getElementById("leadMeta").textContent = "News feed error";
   document.getElementById("leadDek").innerHTML = `
     <div class="error-box">
       <strong>News feed error:</strong> ${escapeHtml(message)}
     </div>
   `;
+
+  document.getElementById("leadBullets").innerHTML = `
+    <li>Check the API key</li>
+    <li>Check NewsData quota and domain access</li>
+    <li>Refresh the page after updating</li>
+  `;
+
   document.getElementById("breakingList").innerHTML = `<div class="panel-empty">Unable to load breaking headlines.</div>`;
   document.getElementById("mostReadList").innerHTML = `<div class="panel-empty">Unable to load most-read stories.</div>`;
+  document.getElementById("tickerTrack").innerHTML = `<span>Unable to load headlines.</span>`;
 
   Object.values(sectionEls).forEach((el) => {
     el.innerHTML = `<div class="panel-empty">No stories loaded.</div>`;
