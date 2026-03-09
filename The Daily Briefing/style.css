@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Daily Briefing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Playfair+Display:wght@600;700;800&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="page-shell">
+    <header class="site-header">
+      <div class="flag-corner left"></div>
+      <div class="flag-corner right"></div>
+
+      <div class="topbar">
+        <div class="tagline">REAL NEWS • REAL AMERICA • REAL ISSUES</div>
+        <div class="top-actions">
+          <input type="text" placeholder="Search" />
+          <button type="button">Subscribe</button>
+        </div>
+      </div>
+
+      <h1>THE DAILY BRIEFING</h1>
+
+      <nav class="main-nav">
+        <a href="#">America</a>
+        <a href="#">World</a>
+        <a href="#">Economy</a>
+        <a href="#">Tech</a>
+        <a href="#">Politics</a>
+        <a href="#">Defense</a>
+        <a href="#">Culture</a>
+      </nav>
+
+      <div class="breaking-bar">
+        <span>BREAKING NEWS</span>
+        <div class="breaking-scroll">
+          Senate passes border security bill • Dow surges as markets rally • U.S. Navy intercepts drones in Red Sea • Housing market shows signs of recovery
+        </div>
+      </div>
+    </header>
+
+    <main class="main-layout">
+      <section class="content-column">
+        <section class="lead-grid">
+          <article class="hero-card paper-card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1541872705-1f73c6400ec9?auto=format&fit=crop&w=1200&q=80" alt="Capitol building" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">FOX NEWS</div>
+              <h2>Senate Passes New Border Security Bill</h2>
+              <p>
+                A major vote in Washington drives the day’s top headline, leading a front-page style layout built around bold coverage and quick access to source articles.
+              </p>
+              <a class="story-link" href="https://www.foxnews.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="mini-card paper-card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1575320181282-9afab399332c?auto=format&fit=crop&w=900&q=80" alt="Court building" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">AP NEWS</div>
+              <h3>Supreme Court Upholds Voting Law</h3>
+              <a class="story-link" href="https://apnews.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="mini-card paper-card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1518546305927-5a555bb7020d?auto=format&fit=crop&w=900&q=80" alt="Warship" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">REUTERS</div>
+              <h3>U.S. Navy Intercepts Drones in Red Sea</h3>
+              <a class="story-link" href="https://www.reuters.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+        </section>
+
+        <section class="masonry-grid">
+          <article class="paper-card card tall">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=900&q=80" alt="Election map" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">NY POST</div>
+              <h3>Election Race Heats Up in Key States</h3>
+              <p>Campaign positioning tightens as the political map begins to shift.</p>
+              <a class="story-link" href="https://nypost.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1518544866330-4e93c0e4aeb0?auto=format&fit=crop&w=900&q=80" alt="China skyline" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">REUTERS</div>
+              <h3>China’s Economy Slows Amid Global Pressure</h3>
+              <a class="story-link" href="https://www.reuters.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=900&q=80" alt="Money" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">USA TODAY</div>
+              <h3>Economy Shows Signs of Stabilizing</h3>
+              <a class="story-link" href="https://www.usatoday.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card wide">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&w=1100&q=80" alt="Housing market" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">USA TODAY</div>
+              <h3>Housing Market Shows New Signs of Hope</h3>
+              <p>Fresh movement in listings and buyer demand is putting housing back near the center of economic coverage.</p>
+              <a class="story-link" href="https://www.usatoday.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=900&q=80" alt="Oil pump" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">REUTERS</div>
+              <h3>Oil Prices Fluctuate as Markets React</h3>
+              <a class="story-link" href="https://www.reuters.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card tall">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=900&q=80" alt="Technology" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">USA TODAY</div>
+              <h3>AI Regulation Debate Grows in Washington</h3>
+              <p>Tech policy becomes a larger front-page issue as lawmakers weigh oversight and competition.</p>
+              <a class="story-link" href="https://www.usatoday.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card wide accent-note">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1521295121783-8a321d551ad2?auto=format&fit=crop&w=1100&q=80" alt="Border" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">AP NEWS</div>
+              <h3>Texas Border Standoff Intensifies</h3>
+              <p>A rough-edged feature card helps break up the grid so the page feels more like a newspaper front page than a plain catalog.</p>
+              <a class="story-link" href="https://apnews.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1519985176271-adb1088fa94c?auto=format&fit=crop&w=900&q=80" alt="Storm" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">AP NEWS</div>
+              <h3>Storms Move Across Midwest</h3>
+              <a class="story-link" href="https://apnews.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+
+          <article class="paper-card card">
+            <div class="card-image">
+              <img src="https://images.unsplash.com/photo-1542223616-740d5dff9494?auto=format&fit=crop&w=900&q=80" alt="Ukraine" />
+            </div>
+            <div class="card-body">
+              <div class="source-line">AP NEWS</div>
+              <h3>Ukraine Fighting Escalates in East</h3>
+              <a class="story-link" href="https://apnews.com/" target="_blank">Read Full Story →</a>
+            </div>
+          </article>
+        </section>
+      </section>
+
+      <aside class="sidebar-column">
+        <section class="sidebar-box paper-card">
+          <h4>LATEST</h4>
+          <ul class="latest-list">
+            <li>
+              <a href="https://www.reuters.com/" target="_blank">Dow Jones Surges as Markets Rally</a>
+              <span>Reuters • 1 hour ago</span>
+            </li>
+            <li>
+              <a href="https://apnews.com/" target="_blank">Clashes Escalate in Eastern Ukraine</a>
+              <span>AP News • 30 minutes ago</span>
+            </li>
+            <li>
+              <a href="https://www.usatoday.com/" target="_blank">Washington Debates AI Regulations</a>
+              <span>USA Today • 2 hours ago</span>
+            </li>
+          </ul>
+        </section>
+
+        <section class="sidebar-box paper-card">
+          <h4>OPINION</h4>
+          <div class="opinion-card">
+            <strong>America at a Crossroads</strong>
+            <p>Strong editorial styling helps the page feel less mechanical and more like a real digital front page.</p>
+            <a class="story-link" href="https://nypost.com/" target="_blank">Read Full Story →</a>
+          </div>
+        </section>
+
+        <section class="sidebar-box paper-card">
+          <h4>STAY INFORMED</h4>
+          <p>Get the top stories daily.</p>
+          <form class="subscribe-form">
+            <input type="email" placeholder="Enter your email" />
+            <button type="button">SUBSCRIBE</button>
+          </form>
+        </section>
+
+        <section class="sidebar-box paper-card">
+          <h4>TRUSTED SOURCES</h4>
+          <div class="sources">
+            <span>FOX NEWS</span>
+            <span>REUTERS</span>
+            <span>AP NEWS</span>
+            <span>NY POST</span>
+            <span>USA TODAY</span>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <div>TRUST • FREEDOM • STRENGTH</div>
+      <div class="footer-sources">Fox News • Reuters • AP News • New York Post • USA Today</div>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
