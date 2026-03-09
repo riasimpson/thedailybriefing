@@ -1,12 +1,16 @@
 const NEWSDATA_API_KEY = "pub_bf801222c93f4a0aa638f45e1ba45df9";
 
 const NEWS_ENDPOINT = "https://newsdata.io/api/1/latest";
-const NEWS_DOMAINS = [
+
+const PRIMARY_DOMAINS = [
   "reuters.com",
   "apnews.com",
   "bbc.com",
   "theguardian.com",
-  "foxnews.com",
+  "foxnews.com"
+];
+
+const BACKUP_DOMAINS = [
   "nypost.com",
   "washingtonpost.com"
 ];
@@ -76,6 +80,21 @@ async function fetchNews() {
     throw new Error("NewsData API key missing or invalid.");
   }
 
+  let articles = await fetchNewsBatch(PRIMARY_DOMAINS);
+
+  if (articles.length < 12 && BACKUP_DOMAINS.length) {
+    const backupArticles = await fetchNewsBatch(BACKUP_DOMAINS);
+    articles = normalizeArticles([...articles, ...backupArticles]);
+  }
+
+  if (!articles.length) {
+    throw new Error("No articles returned. Check quota, plan limits, or API response.");
+  }
+
+  return articles;
+}
+
+async function fetchNewsBatch(domains) {
   const articles = [];
   let nextPage = null;
 
@@ -83,7 +102,7 @@ async function fetchNews() {
     const url = new URL(NEWS_ENDPOINT);
     url.searchParams.set("apikey", NEWSDATA_API_KEY);
     url.searchParams.set("language", "en");
-    url.searchParams.set("domain", NEWS_DOMAINS.join(","));
+    url.searchParams.set("domain", domains.join(","));
     url.searchParams.set("size", "10");
 
     if (nextPage) {
@@ -95,11 +114,18 @@ async function fetchNews() {
       cache: "no-store"
     });
 
-    if (!res.ok) {
-      throw new Error(`NewsData request failed (${res.status}).`);
+    const text = await res.text();
+    let data;
+
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`NewsData returned non-JSON response: ${text.slice(0, 200)}`);
     }
 
-    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || `NewsData request failed (${res.status}).`);
+    }
 
     if (data.status !== "success") {
       throw new Error(data.message || "News feed failed.");
@@ -112,13 +138,7 @@ async function fetchNews() {
     nextPage = data.nextPage;
   }
 
-  const normalized = normalizeArticles(articles);
-
-  if (!normalized.length) {
-    throw new Error("No articles returned for the selected sources.");
-  }
-
-  return normalized;
+  return normalizeArticles(articles);
 }
 
 function normalizeArticles(items) {
@@ -496,9 +516,9 @@ function renderError(error) {
   `;
 
   document.getElementById("leadBullets").innerHTML = `
-    <li>Check the API key</li>
-    <li>Check NewsData quota and domain access</li>
-    <li>Refresh the page after updating</li>
+    <li>Keep each query to 5 domains max</li>
+    <li>Check your NewsData response in browser console</li>
+    <li>Free plan articles are delayed</li>
   `;
 
   document.getElementById("breakingList").innerHTML = `<div class="panel-empty">Unable to load breaking headlines.</div>`;
